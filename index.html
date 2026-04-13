@@ -1393,31 +1393,54 @@
         // ============================================================
         function printBill() {
             const content = document.getElementById('bill-print-area').innerHTML;
-            const zone = document.getElementById('mobile-print-zone');
 
-            // Inject invoice content into the always-present print zone
-            zone.innerHTML = content;
+            const win = window.open('', '_blank');
 
-            // Cleanup after print dialog closes
-            function cleanup() {
-                zone.innerHTML = '';
-                window.removeEventListener('afterprint', cleanup);
-            }
-            window.addEventListener('afterprint', cleanup);
-            // Safety fallback in case afterprint never fires (some Android browsers)
-            setTimeout(cleanup, 120000);
+            win.document.write(`
+        <html dir="rtl">
+        <head>
+            <title>طباعة الفاتورة</title>
 
-            // Two animation frames ensure the DOM is painted before printing,
-            // then wait for the Cairo webfont to be fully loaded.
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    if (document.fonts && document.fonts.ready) {
-                        document.fonts.ready.then(() => window.print()).catch(() => window.print());
-                    } else {
-                        window.print();
-                    }
-                });
-            });
+            <!-- important for mobile -->
+            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+            <!-- font (VERY IMPORTANT for Arabic) -->
+            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;700&display=swap" rel="stylesheet">
+
+            <style>
+                body {
+                    font-family: 'Cairo', sans-serif;
+                    margin: 0;
+                    padding: 20px;
+                    direction: rtl;
+                    color: #1e293b;
+                }
+
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+
+                td, th {
+                    border: 1px solid #e2e8f0;
+                    padding: 8px;
+                    text-align: center;
+                }
+            </style>
+        </head>
+        <body>
+            ${content}
+        </body>
+        </html>
+    `);
+
+            win.document.close();
+
+            // wait for content + fonts
+            setTimeout(() => {
+                win.print();
+                win.close();
+            }, 500);
         }
 
         // ============================================================
