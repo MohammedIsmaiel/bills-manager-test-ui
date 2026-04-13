@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ادارة الفواتير</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;900&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { cairo: ['Cairo', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#f0f7ff', 100: '#dbeefe', 200: '#bfe0fd', 300: '#93cbfb', 400: '#5aaef7', 500: '#3490f3', 600: '#1d72e8', 700: '#175cd5', 800: '#194bac', 900: '#1a4188', 950: '#142954' },
+                        gold: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * {
+            font-family: 'Cairo', sans-serif;
+        }
+
+        :root {
+            --bg: #f0f4f8;
+            --surface: #ffffff;
+            --surface2: #f8fafc;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --brand: #1d72e8;
+            --brand-dark: #194bac;
+            --accent: #f59e0b;
+            --danger: #ef4444;
+            --success: #10b981;
+            --radius: 14px;
+            --shadow: 0 4px 24px rgba(0, 0, 0, .07);
+            --shadow-lg: 0 8px 40px rgba(0, 0, 0, .12);
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        #sidebar {
+            width: 240px;
+            background: linear-gradient(160deg, #142954 0%, #1d72e8 100%);
+            min-height: 100vh;
+            position: fixed;
+            top: 0;
+            right: 0;
+            z-index: 50;
+            transition: transform .3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #main-content {
+            margin-right: 240px;
+            transition: margin .3s ease;
+        }
+
+        @media (max-width: 768px) {
+            #sidebar {
+                transform: translateX(100%);
+            }
+
+            #sidebar.open {
+                transform: translateX(0);
+            }
+
+            #main-content {
+                margin-right: 0;
+            }
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin: 3px 12px;
+            cursor: pointer;
+            color: rgba(255, 255, 255, .75);
+            transition: all .2s;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, .15);
+            color: #fff;
+        }
+
+        .nav-item.active {
+            background: rgba(255, 255, 255, .22);
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .nav-item svg {
+            flex-shrink: 0;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 18px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all .2s;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #1d72e8, #194bac);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(29, 114, 232, .35);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, .35);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(239, 68, 68, .35);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border: 1.5px solid var(--border);
+            color: var(--text-muted);
+        }
+
+        .btn-ghost:hover {
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+            border-radius: 8px;
+        }
+
+        .btn-icon {
+            padding: 7px;
+            border-radius: 8px;
+        }
+
+        .inp {
+            width: 100%;
+            background: var(--surface2);
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 14px;
+            font-family: 'Cairo', sans-serif;
+            color: var(--text);
+            transition: border .2s, box-shadow .2s;
+            outline: none;
+        }
+
+        .inp:focus {
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px rgba(29, 114, 232, .12);
+        }
+
+        .inp::placeholder {
+            color: var(--text-muted);
+        }
+
+        label.lbl {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+        }
+
+        .tbl {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .tbl th {
+            background: #f1f5f9;
+            padding: 11px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-align: center;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .tbl td {
+            padding: 11px 14px;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .tbl tr:last-child td {
+            border-bottom: none;
+        }
+
+        .tbl tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .badge-blue {
+            background: #dbeefe;
+            color: #1d72e8;
+        }
+
+        .badge-green {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .badge-gold {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .badge-purple {
+            background: #ede9fe;
+            color: #7c3aed;
+        }
+
+        .stat-card {
+            padding: 20px;
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        #toast-container {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: var(--surface);
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 18px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            animation: slideIn .3s ease;
+            min-width: 240px;
+        }
+
+        .toast.success {
+            border-color: var(--success);
+        }
+
+        .toast.error {
+            border-color: var(--danger);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .45);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .modal {
+            background: var(--surface);
+            border-radius: 18px;
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            max-width: 700px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalIn .25s ease;
+        }
+
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 99px;
+        }
+
+        .animated-underline {
+            position: relative;
+            display: inline-block;
+        }
+
+        .animated-underline::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            right: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, #1d72e8, #f59e0b);
+            border-radius: 99px;
+        }
+
+        /* Category chip tag */
+        .cat-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #f1f5f9;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 99px;
+            padding: 5px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            transition: all .15s;
+        }
+
+        .cat-chip:hover {
+            border-color: #94a3b8;
+        }
+
+        .cat-chip .del-cat {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ef4444;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        /* Mobile item card view */
+        @media (max-width: 640px) {
+
+            .tbl th,
+            .tbl td {
+                padding: 8px 8px;
+                font-size: 12px;
+            }
+
+            .item-cat-sel {
+                font-size: 12px;
+                padding: 6px 8px;
+            }
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+
+            #print-area,
+            #print-area * {
+                visibility: visible;
+            }
+
+            #print-area {
+                position: fixed;
+                inset: 0;
+                background: white;
+                padding: 20mm 15mm;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="sidebar-overlay" onclick="closeSidebar()" class="fixed inset-0 bg-black/40 z-40" style="display:none;">
+    </div>
+
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <div class="p-5 pb-4 border-b border-white/10">
+            <div class="flex items-center gap-3 mb-1">
+                <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                    <svg width="22" height="22" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" />
+                        <polyline points="13 2 13 9 20 9" />
+                    </svg>
+                </div>
+                <div>
+                    <div class="text-white font-bold text-sm leading-tight">ادارة الفواتير</div>
+                </div>
+            </div>
+        </div>
+
+        <nav class="flex-1 py-4">
+            <div class="text-white/40 text-xs font-bold px-5 mb-2 uppercase tracking-widest">القائمة</div>
+            <div class="nav-item active" onclick="showSection('dashboard')">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="7" height="7" />
+                    <rect x="14" y="3" width="7" height="7" />
+                    <rect x="14" y="14" width="7" height="7" />
+                    <rect x="3" y="14" width="7" height="7" />
+                </svg>
+                لوحة التحكم
+            </div>
+            <div class="nav-item" onclick="showSection('bills')">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                </svg>
+                الفواتير
+            </div>
+            <div class="nav-item" onclick="showSection('new-bill')">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="16" />
+                    <line x1="8" y1="12" x2="16" y2="12" />
+                </svg>
+                فاتورة جديدة
+            </div>
+            <div class="nav-item" onclick="showSection('categories')">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" />
+                    <line x1="7" y1="7" x2="7.01" y2="7" />
+                </svg>
+                الفئات
+            </div>
+            <div class="nav-item" onclick="showSection('import-export')">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <polyline points="8 17 12 21 16 17" />
+                    <line x1="12" y1="12" x2="12" y2="21" />
+                    <path d="M20.88 18.09A5 5 0 0018 9h-1.26A8 8 0 103 16.29" />
+                </svg>
+                استيراد / تصدير
+            </div>
+        </nav>
+
+        <div class="p-4 border-t border-white/10">
+            <div class="text-white/40 text-xs text-center">الإصدار 1.1.0</div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-content" class="min-h-screen">
+
+        <header
+            class="bg-white border-b border-gray-200 sticky top-0 z-30 px-4 md:px-8 py-3 flex items-center justify-between"
+            style="box-shadow:0 2px 12px rgba(0,0,0,.06);">
+            <button onclick="toggleSidebar()" class="md:hidden btn btn-ghost btn-icon">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <line x1="3" y1="12" x2="21" y2="12" />
+                    <line x1="3" y1="6" x2="21" y2="6" />
+                    <line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+            </button>
+            <div id="page-title" class="text-lg font-bold text-gray-800">لوحة التحكم</div>
+            <div class="text-sm text-gray-500 hidden sm:block" id="current-date"></div>
+        </header>
+
+        <main class="p-4 md:p-8">
+
+            <!-- ========== DASHBOARD ========== -->
+            <div id="sec-dashboard" class="section active">
+                <h2 class="text-2xl font-black text-gray-800 mb-6 animated-underline">نظرة عامة</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" id="stats-grid"></div>
+                <div class="card p-0 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                        <h3 class="font-bold text-gray-700">آخر الفواتير</h3>
+                        <button class="btn btn-ghost btn-sm" onclick="showSection('bills')">عرض الكل</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="tbl" id="recent-bills-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>العميل</th>
+                                    <th>البائع</th>
+                                    <th>التاريخ</th>
+                                    <th>الإجمالي</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-bills-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== BILLS LIST ========== -->
+            <div id="sec-bills" class="section">
+                <div class="flex flex-col sm:flex-row gap-3 mb-6 items-start sm:items-center justify-between">
+                    <h2 class="text-2xl font-black text-gray-800 animated-underline">الفواتير</h2>
+                    <button class="btn btn-primary" onclick="showSection('new-bill')">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"
+                            viewBox="0 0 24 24">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        فاتورة جديدة
+                    </button>
+                </div>
+                <div class="card p-4 mb-5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                        <div>
+                            <label class="lbl">اسم العميل</label>
+                            <input type="text" class="inp" id="filter-name" placeholder="بحث باسم العميل..."
+                                oninput="renderBillsTable()" />
+                        </div>
+                        <div>
+                            <label class="lbl">رقم العميل</label>
+                            <input type="text" class="inp" id="filter-number" placeholder="رقم الهاتف..."
+                                oninput="renderBillsTable()" />
+                        </div>
+                        <div>
+                            <label class="lbl">من تاريخ</label>
+                            <input type="date" class="inp" id="filter-from" oninput="renderBillsTable()" />
+                        </div>
+                        <div>
+                            <label class="lbl">إلى تاريخ</label>
+                            <input type="date" class="inp" id="filter-to" oninput="renderBillsTable()" />
+                        </div>
+                    </div>
+                    <div class="flex gap-2 mt-3">
+                        <button class="btn btn-ghost btn-sm" onclick="clearFilters()">مسح الفلاتر</button>
+                        <span class="text-sm text-gray-500 flex items-center" id="filter-count"></span>
+                    </div>
+                </div>
+                <div class="card p-0 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="tbl">
+                            <thead>
+                                <tr>
+                                    <th>رقم الفاتورة</th>
+                                    <th>العميل</th>
+                                    <th>البائع</th>
+                                    <th>الهاتف</th>
+                                    <th>التاريخ</th>
+                                    <th>عدد الأصناف</th>
+                                    <th>الإجمالي</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bills-table-body"></tbody>
+                        </table>
+                    </div>
+                    <div id="empty-bills" class="hidden py-16 text-center text-gray-400">
+                        <svg class="w-14 h-14 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor"
+                            stroke-width="1.5" viewBox="0 0 24 24">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                        <div class="font-semibold">لا توجد فواتير</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== NEW / EDIT BILL ========== -->
+            <div id="sec-new-bill" class="section">
+                <div class="flex items-center gap-3 mb-6">
+                    <button class="btn btn-ghost btn-icon" onclick="showSection('bills')">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+                            viewBox="0 0 24 24">
+                            <polyline points="9 18 15 12 9 6" />
+                        </svg>
+                    </button>
+                    <h2 class="text-2xl font-black text-gray-800 animated-underline" id="form-title">فاتورة جديدة</h2>
+                </div>
+
+                <!-- Customer Info -->
+                <div class="card p-5 mb-5">
+                    <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2">
+                        <svg width="18" height="18" fill="none" stroke="#1d72e8" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
+                        </svg>
+                        بيانات العميل والبائع
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="lbl">اسم العميل *</label>
+                            <input type="text" class="inp" id="bill-customer-name" placeholder="اسم العميل" required />
+                        </div>
+                        <div>
+                            <label class="lbl">رقم الهاتف</label>
+                            <input type="text" class="inp" id="bill-customer-number" placeholder="01xxxxxxxxx" />
+                        </div>
+                        <div>
+                            <label class="lbl">اسم البائع *</label>
+                            <input type="text" class="inp" id="bill-seller-name" placeholder="اسم البائع / المندوب"
+                                required />
+                        </div>
+                        <div>
+                            <label class="lbl">التاريخ *</label>
+                            <input type="date" class="inp" id="bill-date" required />
+                        </div>
+                        <div>
+                            <label class="lbl">بيان</label>
+                            <input type="text" class="inp" id="bill-note" placeholder="ملاحظات..." />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Items -->
+                <div class="card p-5 mb-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-gray-700 flex items-center gap-2">
+                            <svg width="18" height="18" fill="none" stroke="#1d72e8" stroke-width="2"
+                                viewBox="0 0 24 24">
+                                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+                                <line x1="3" y1="6" x2="21" y2="6" />
+                            </svg>
+                            الأصناف
+                        </h3>
+                        <button class="btn btn-primary btn-sm" onclick="addItemRow()">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"
+                                viewBox="0 0 24 24">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                            إضافة صنف
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto -mx-5 px-5">
+                        <table class="tbl" id="items-table" style="min-width:620px;">
+                            <thead>
+                                <tr>
+                                    <th style="width:36px">#</th>
+                                    <th>الصنف</th>
+                                    <th style="min-width:130px">الفئة</th>
+                                    <th style="width:85px">الكمية</th>
+                                    <th style="width:100px">السعر</th>
+                                    <th style="width:110px">القيمة</th>
+                                    <th style="width:44px"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="items-body"></tbody>
+                        </table>
+                    </div>
+                    <div id="no-items-msg" class="py-8 text-center text-gray-400 text-sm hidden">لا توجد أصناف، أضف
+                        صنفاً جديداً
+                    </div>
+
+                    <div class="mt-5 flex justify-end">
+                        <div
+                            class="bg-gradient-to-br from-brand-50 to-brand-100 rounded-2xl p-5 min-w-[260px] border border-brand-200">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm text-gray-600 font-semibold">عدد الأصناف:</span>
+                                <span class="font-bold text-gray-800" id="total-items-count">0</span>
+                            </div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm text-gray-600 font-semibold">إجمالي الكميات:</span>
+                                <span class="font-bold text-gray-800" id="total-qty">0</span>
+                            </div>
+                            <div class="border-t border-brand-200 pt-2 mt-2 flex justify-between items-center">
+                                <span class="text-base font-bold text-brand-700">الإجمالي:</span>
+                                <span class="text-xl font-black text-brand-700" id="total-amount">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 justify-end">
+                    <button class="btn btn-ghost" onclick="showSection('bills')">إلغاء</button>
+                    <button class="btn btn-success" onclick="saveBill()">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"
+                            viewBox="0 0 24 24">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        حفظ الفاتورة
+                    </button>
+                </div>
+            </div>
+
+            <!-- ========== CATEGORIES ========== -->
+            <div id="sec-categories" class="section">
+                <h2 class="text-2xl font-black text-gray-800 mb-6 animated-underline">إدارة الفئات</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    <!-- Add category -->
+                    <div class="card p-6">
+                        <div class="flex items-center gap-3 mb-5">
+                            <div class="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
+                                <svg width="22" height="22" fill="none" stroke="#7c3aed" stroke-width="2"
+                                    viewBox="0 0 24 24">
+                                    <path
+                                        d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" />
+                                    <line x1="7" y1="7" x2="7.01" y2="7" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-gray-800">إضافة فئة جديدة</h3>
+                                <p class="text-sm text-gray-500">أضف فئات لتصنيف الأصناف في الفواتير</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="text" class="inp flex-1" id="new-cat-input" placeholder="اسم الفئة..."
+                                onkeydown="if(event.key==='Enter') addCategory()" />
+                            <button class="btn btn-primary flex-shrink-0" onclick="addCategory()">
+                                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"
+                                    viewBox="0 0 24 24">
+                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                </svg>
+                                إضافة
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">ملاحظة: الفئة "أخرى" متاحة دائماً للإدخال الحر.</p>
+                    </div>
+
+                    <!-- Categories list -->
+                    <div class="card p-6">
+                        <h3 class="font-bold text-gray-800 mb-4">الفئات الحالية</h3>
+                        <div id="categories-list" class="flex flex-wrap gap-2 min-h-[60px]">
+                            <div class="text-gray-400 text-sm" id="no-cats-msg">لا توجد فئات بعد</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview -->
+                <div class="card p-6 mt-6">
+                    <h3 class="font-bold text-gray-700 mb-3">معاينة القائمة في الفواتير</h3>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <select class="inp" style="max-width:220px;" disabled>
+                            <option>— اختر الفئة —</option>
+                            <option id="preview-cats"></option>
+                            <option>أخرى</option>
+                        </select>
+                        <span class="text-sm text-gray-500">هكذا تظهر قائمة الفئات عند إضافة صنف</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== IMPORT / EXPORT ========== -->
+            <div id="sec-import-export" class="section">
+                <h2 class="text-2xl font-black text-gray-800 mb-6 animated-underline">استيراد / تصدير</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="card p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
+                                <svg width="24" height="24" fill="none" stroke="#059669" stroke-width="2"
+                                    viewBox="0 0 24 24">
+                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                                    <polyline points="7 10 12 15 17 10" />
+                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-gray-800">تصدير البيانات</h3>
+                                <p class="text-sm text-gray-500">حفظ جميع الفواتير كملف JSON</p>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-500 mb-5">يمكنك تصدير جميع الفواتير لحفظها احتياطياً أو نقلها إلى
+                            جهاز آخر.</p>
+                        <button class="btn btn-success w-full justify-center" onclick="exportBills()">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"
+                                viewBox="0 0 24 24">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                            تصدير JSON
+                        </button>
+                    </div>
+                    <div class="card p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                                <svg width="24" height="24" fill="none" stroke="#1d72e8" stroke-width="2"
+                                    viewBox="0 0 24 24">
+                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                                    <polyline points="17 8 12 3 7 8" />
+                                    <line x1="12" y1="3" x2="12" y2="15" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-gray-800">استيراد البيانات</h3>
+                                <p class="text-sm text-gray-500">تحميل فواتير من ملف JSON</p>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-500 mb-5">سيتم دمج الفواتير المستوردة مع البيانات الحالية. الفواتير
+                            المكررة لن
+                            تُضاف مرة أخرى.</p>
+                        <label class="btn btn-primary w-full justify-center cursor-pointer">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"
+                                viewBox="0 0 24 24">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                                <polyline points="17 8 12 3 7 8" />
+                                <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                            اختر ملف JSON
+                            <input type="file" accept=".json" class="hidden" onchange="importBills(event)" />
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- VIEW BILL MODAL -->
+    <div id="view-modal" class="modal-backdrop" style="display:none;">
+        <div class="modal">
+            <div class="p-5 border-b border-gray-100 flex items-center justify-between no-print">
+                <h3 class="font-bold text-gray-800 text-lg">عرض الفاتورة</h3>
+                <div class="flex gap-2">
+                    <button class="btn btn-primary btn-sm" onclick="printBill()">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"
+                            viewBox="0 0 24 24">
+                            <polyline points="6 9 6 2 18 2 18 9" />
+                            <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2" />
+                            <rect x="6" y="14" width="12" height="8" />
+                        </svg>
+                        طباعة
+                    </button>
+                    <button class="btn btn-ghost btn-sm btn-icon" onclick="closeViewModal()">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+                            viewBox="0 0 24 24">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div id="bill-print-area" class="p-6"></div>
+        </div>
+    </div>
+
+    <!-- DELETE MODAL -->
+    <div id="delete-modal" class="modal-backdrop" style="display:none;">
+        <div class="modal" style="max-width:400px;">
+            <div class="p-6 text-center">
+                <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                    <svg width="28" height="28" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-black text-gray-800 mb-2">حذف الفاتورة</h3>
+                <p class="text-gray-500 mb-6">هل أنت متأكد من حذف هذه الفاتورة؟ لا يمكن التراجع عن هذا الإجراء.</p>
+                <div class="flex gap-3 justify-center">
+                    <button class="btn btn-ghost" onclick="closeDeleteModal()">إلغاء</button>
+                    <button class="btn btn-danger" id="confirm-delete-btn">حذف</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+    <div id="print-area" style="display:none;"></div>
+
+    <script>
+        // ============================================================
+        //  DATA LAYER
+        // ============================================================
+        const LS_KEY = 'ruwaiee_bills';
+        const LS_CATS = 'ruwaiee_categories';
+
+        function loadBills() { try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; } catch { return []; } }
+        function saveBills(b) { localStorage.setItem(LS_KEY, JSON.stringify(b)); }
+        function getBill(id) { return loadBills().find(b => b.id === id); }
+        function deleteBillById(id) { saveBills(loadBills().filter(b => b.id !== id)); }
+        function upsertBill(bill) {
+            const bills = loadBills();
+            const idx = bills.findIndex(b => b.id === bill.id);
+            if (idx >= 0) bills[idx] = bill; else bills.unshift(bill);
+            saveBills(bills);
+        }
+
+        function loadCategories() { try { return JSON.parse(localStorage.getItem(LS_CATS)) || []; } catch { return []; } }
+        function saveCategories(c) { localStorage.setItem(LS_CATS, JSON.stringify(c)); }
+
+        // ============================================================
+        //  ROUTING
+        // ============================================================
+        let currentSection = 'dashboard';
+        let editingBillId = null;
+        const sectionTitles = { dashboard: 'لوحة التحكم', bills: 'الفواتير', 'new-bill': 'فاتورة جديدة', categories: 'الفئات', 'import-export': 'استيراد / تصدير' };
+
+        function showSection(name) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById('sec-' + name).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => {
+                n.classList.remove('active');
+                if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + name + "'")) n.classList.add('active');
+            });
+            document.getElementById('page-title').textContent = sectionTitles[name] || '';
+            currentSection = name;
+            closeSidebar();
+            if (name === 'dashboard') renderDashboard();
+            if (name === 'bills') renderBillsTable();
+            if (name === 'new-bill' && !editingBillId) initNewBill();
+            if (name === 'categories') renderCategories();
+        }
+
+        // ============================================================
+        //  SIDEBAR
+        // ============================================================
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            const ov = document.getElementById('sidebar-overlay');
+            if (sb.classList.contains('open')) { closeSidebar(); }
+            else { sb.classList.add('open'); ov.style.display = 'block'; }
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebar-overlay').style.display = 'none';
+        }
+
+        function formatDate(d) {
+            if (!d) return '';
+            return new Date(d).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+        function todayISO() { return new Date().toISOString().split('T')[0]; }
+
+        // ============================================================
+        //  TOAST
+        // ============================================================
+        function showToast(msg, type = 'success') {
+            const tc = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            const icon = type === 'success'
+                ? '<svg width="18" height="18" fill="none" stroke="#10b981" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>'
+                : '<svg width="18" height="18" fill="none" stroke="#ef4444" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+            t.className = 'toast ' + type;
+            t.innerHTML = icon + '<span>' + msg + '</span>';
+            tc.appendChild(t);
+            setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(20px)'; t.style.transition = 'all .3s'; setTimeout(() => t.remove(), 300); }, 3000);
+        }
+
+        // ============================================================
+        //  CATEGORIES
+        // ============================================================
+        function addCategory() {
+            const inp = document.getElementById('new-cat-input');
+            const val = inp.value.trim();
+            if (!val) { showToast('يرجى إدخال اسم الفئة', 'error'); return; }
+            const cats = loadCategories();
+            if (cats.map(c => c.toLowerCase()).includes(val.toLowerCase())) { showToast('هذه الفئة موجودة مسبقاً', 'error'); return; }
+            if (val === 'أخرى') { showToast('الفئة "أخرى" محجوزة', 'error'); return; }
+            cats.push(val);
+            saveCategories(cats);
+            inp.value = '';
+            renderCategories();
+            showToast('تمت إضافة الفئة: ' + val);
+        }
+
+        function deleteCategory(idx) {
+            const cats = loadCategories();
+            cats.splice(idx, 1);
+            saveCategories(cats);
+            renderCategories();
+            showToast('تم حذف الفئة');
+        }
+
+        function renderCategories() {
+            const cats = loadCategories();
+            const list = document.getElementById('categories-list');
+            const noMsg = document.getElementById('no-cats-msg');
+            if (!cats.length) {
+                list.innerHTML = '<div class="text-gray-400 text-sm" id="no-cats-msg">لا توجد فئات بعد</div>';
+                return;
+            }
+            list.innerHTML = cats.map((c, i) => `
+        <span class="cat-chip">
+          <span>${escHtml(c)}</span>
+          <button class="del-cat" onclick="deleteCategory(${i})" title="حذف">×</button>
+        </span>`).join('');
+
+            // update preview select
+            const pre = document.getElementById('preview-cats');
+            if (pre) pre.outerHTML = cats.map(c => `<option>${escHtml(c)}</option>`).join('') + '<option>أخرى</option>';
+        }
+
+        // Build category <select> options HTML
+        function buildCatOptions(selected) {
+            const cats = loadCategories();
+            let html = '<option value="">— اختر الفئة —</option>';
+            cats.forEach(c => { html += `<option value="${escHtml(c)}" ${selected === c ? 'selected' : ''}>${escHtml(c)}</option>`; });
+            html += `<option value="أخرى" ${selected === 'أخرى' || (!cats.includes(selected) && selected) ? 'selected' : ''}>أخرى</option>`;
+            return html;
+        }
+
+        // ============================================================
+        //  DASHBOARD
+        // ============================================================
+        function renderDashboard() {
+            const bills = loadBills();
+            const totalMoney = bills.reduce((s, b) => s + (b.total || 0), 0);
+            const totalItems = bills.reduce((s, b) => s + (b.items ? b.items.length : 0), 0);
+            const thisMonth = bills.filter(b => {
+                const d = new Date(b.date), now = new Date();
+                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+            }).length;
+
+            const stats = [
+                { label: 'إجمالي الفواتير', value: bills.length, icon: 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z', color: '#1d72e8', bg: '#dbeefe' },
+                { label: 'إجمالي المبيعات', value: totalMoney.toLocaleString('ar-EG') + ' ج.م', icon: 'M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6', color: '#059669', bg: '#d1fae5' },
+                { label: 'فواتير هذا الشهر', value: thisMonth, icon: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01', color: '#d97706', bg: '#fef3c7' },
+                { label: 'إجمالي الأصناف', value: totalItems, icon: 'M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z', color: '#7c3aed', bg: '#ede9fe' },
+            ];
+
+            document.getElementById('stats-grid').innerHTML = stats.map(s => `
+        <div class="card stat-card">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background:${s.bg}">
+            <svg width="22" height="22" fill="none" stroke="${s.color}" stroke-width="2" viewBox="0 0 24 24"><path d="${s.icon}"/></svg>
+          </div>
+          <div>
+            <div class="text-2xl font-black" style="color:${s.color}">${s.value}</div>
+            <div class="text-xs text-gray-500 font-semibold mt-1">${s.label}</div>
+          </div>
+        </div>`).join('');
+
+            const recent = bills.slice(0, 5);
+            document.getElementById('recent-bills-body').innerHTML = recent.length ? recent.map(b => `
+        <tr>
+          <td><span class="badge badge-blue">${b.id.slice(-6)}</span></td>
+          <td class="font-semibold text-gray-700">${escHtml(b.customerName)}</td>
+          <td class="text-gray-500 text-sm">${escHtml(b.sellerName || '-')}</td>
+          <td class="text-gray-500 text-sm">${formatDate(b.date)}</td>
+          <td><span class="font-bold text-green-700">${(b.total || 0).toLocaleString('ar-EG')} ج.م</span></td>
+          <td><div class="flex gap-1 justify-center"><button class="btn btn-ghost btn-icon btn-sm" onclick="viewBill('${b.id}')">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button></div></td>
+        </tr>`).join('')
+                : '<tr><td colspan="6" class="py-8 text-center text-gray-400">لا توجد فواتير بعد</td></tr>';
+        }
+
+        // ============================================================
+        //  BILLS TABLE
+        // ============================================================
+        function getFiltered() {
+            let bills = loadBills();
+            const name = document.getElementById('filter-name')?.value.trim().toLowerCase() || '';
+            const num = document.getElementById('filter-number')?.value.trim() || '';
+            const from = document.getElementById('filter-from')?.value || '';
+            const to = document.getElementById('filter-to')?.value || '';
+            if (name) bills = bills.filter(b => b.customerName.toLowerCase().includes(name));
+            if (num) bills = bills.filter(b => b.customerNumber && b.customerNumber.includes(num));
+            if (from) bills = bills.filter(b => b.date >= from);
+            if (to) bills = bills.filter(b => b.date <= to);
+            return bills;
+        }
+
+        function clearFilters() {
+            ['filter-name', 'filter-number', 'filter-from', 'filter-to'].forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = ''; });
+            renderBillsTable();
+        }
+
+        function renderBillsTable() {
+            const bills = getFiltered();
+            const tbody = document.getElementById('bills-table-body');
+            const empty = document.getElementById('empty-bills');
+            const cnt = document.getElementById('filter-count');
+            if (cnt) cnt.textContent = bills.length + ' فاتورة';
+            if (!bills.length) { tbody.innerHTML = ''; if (empty) empty.classList.remove('hidden'); return; }
+            if (empty) empty.classList.add('hidden');
+            tbody.innerHTML = bills.map(b => `
+        <tr>
+          <td><span class="badge badge-blue font-mono">${b.id.slice(-6)}</span></td>
+          <td class="font-semibold text-gray-700">${escHtml(b.customerName)}</td>
+          <td class="text-gray-600 text-sm font-medium">${escHtml(b.sellerName || '-')}</td>
+          <td class="text-gray-500 text-sm">${b.customerNumber || '-'}</td>
+          <td class="text-gray-500 text-sm">${formatDate(b.date)}</td>
+          <td><span class="badge badge-gold">${(b.items || []).length} صنف</span></td>
+          <td><span class="font-bold text-green-700">${(b.total || 0).toLocaleString('ar-EG')} ج.م</span></td>
+          <td>
+            <div class="flex gap-1 justify-center">
+              <button class="btn btn-ghost btn-icon btn-sm" title="عرض" onclick="viewBill('${b.id}')">
+                <svg width="14" height="14" fill="none" stroke="#1d72e8" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              <button class="btn btn-ghost btn-icon btn-sm" title="تعديل" onclick="editBill('${b.id}')">
+                <svg width="14" height="14" fill="none" stroke="#d97706" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button class="btn btn-ghost btn-icon btn-sm" title="حذف" onclick="confirmDelete('${b.id}')">
+                <svg width="14" height="14" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>`).join('');
+        }
+
+        // ============================================================
+        //  NEW / EDIT BILL FORM
+        // ============================================================
+        let formItems = [];
+
+        function initNewBill() {
+            editingBillId = null;
+            formItems = [];
+            document.getElementById('form-title').textContent = 'فاتورة جديدة';
+            document.getElementById('bill-customer-name').value = '';
+            document.getElementById('bill-customer-number').value = '';
+            document.getElementById('bill-seller-name').value = '';
+            document.getElementById('bill-date').value = todayISO();
+            document.getElementById('bill-note').value = '';
+            renderItemsTable();
+        }
+
+        function editBill(id) {
+            const bill = getBill(id);
+            if (!bill) return;
+            editingBillId = id;
+            formItems = JSON.parse(JSON.stringify(bill.items || []));
+            document.getElementById('form-title').textContent = 'تعديل الفاتورة';
+            document.getElementById('bill-customer-name').value = bill.customerName || '';
+            document.getElementById('bill-customer-number').value = bill.customerNumber || '';
+            document.getElementById('bill-seller-name').value = bill.sellerName || '';
+            document.getElementById('bill-date').value = bill.date || todayISO();
+            document.getElementById('bill-note').value = bill.note || '';
+            showSection('new-bill');
+            renderItemsTable();
+        }
+
+        function addItemRow() {
+            formItems.push({ name: '', category: '', categoryCustom: '', qty: 1, price: 0, total: 0 });
+            renderItemsTable();
+            setTimeout(() => {
+                const inputs = document.querySelectorAll('.item-name-inp');
+                if (inputs.length) inputs[inputs.length - 1].focus();
+            }, 50);
+        }
+
+        function removeItem(idx) {
+            formItems.splice(idx, 1);
+            renderItemsTable();
+        }
+
+        function updateItem(idx, field, val) {
+            formItems[idx][field] = field === 'name' || field === 'category' || field === 'categoryCustom' ? val : (parseFloat(val) || 0);
+            formItems[idx].total = formItems[idx].qty * formItems[idx].price;
+            recalcTotals();
+            const cell = document.getElementById('item-total-' + idx);
+            if (cell) cell.textContent = formItems[idx].total.toLocaleString('ar-EG') + ' ج.م';
+        }
+
+        function onCategoryChange(idx, sel) {
+            formItems[idx].category = sel.value;
+            const customWrap = document.getElementById('cat-custom-' + idx);
+            if (sel.value === 'أخرى') {
+                customWrap.style.display = 'block';
+                customWrap.querySelector('input').focus();
+            } else {
+                customWrap.style.display = 'none';
+                formItems[idx].categoryCustom = '';
+            }
+        }
+
+        function recalcTotals() {
+            const count = formItems.length;
+            const qty = formItems.reduce((s, i) => s + (i.qty || 0), 0);
+            const total = formItems.reduce((s, i) => s + (i.total || 0), 0);
+            document.getElementById('total-items-count').textContent = count;
+            document.getElementById('total-qty').textContent = qty.toLocaleString('ar-EG');
+            document.getElementById('total-amount').textContent = total.toLocaleString('ar-EG') + ' ج.م';
+        }
+
+        function renderItemsTable() {
+            const tbody = document.getElementById('items-body');
+            const noMsg = document.getElementById('no-items-msg');
+            if (!formItems.length) { tbody.innerHTML = ''; noMsg.classList.remove('hidden'); recalcTotals(); return; }
+            noMsg.classList.add('hidden');
+            tbody.innerHTML = formItems.map((item, idx) => {
+                const isOther = item.category === 'أخرى';
+                return `
+        <tr id="item-row-${idx}">
+          <td class="text-gray-400 font-mono text-sm">${idx + 1}</td>
+          <td>
+            <input type="text" class="inp item-name-inp" placeholder="اسم الصنف" value="${escHtml(item.name)}"
+              oninput="formItems[${idx}].name=this.value" style="min-width:120px" />
+          </td>
+          <td>
+            <select class="inp item-cat-sel" style="min-width:120px;" onchange="onCategoryChange(${idx},this)">
+              ${buildCatOptions(item.category)}
+            </select>
+            <div id="cat-custom-${idx}" style="margin-top:5px;display:${isOther ? 'block' : 'none'};">
+              <input type="text" class="inp" placeholder="أدخل الفئة..." value="${escHtml(item.categoryCustom || '')}"
+                oninput="formItems[${idx}].categoryCustom=this.value" style="min-width:110px;font-size:13px;" />
+            </div>
+          </td>
+          <td>
+            <input type="number" class="inp" placeholder="0" value="${item.qty || ''}" min="0"
+              oninput="updateItem(${idx},'qty',this.value)" style="min-width:60px" />
+          </td>
+          <td>
+            <input type="number" class="inp" placeholder="0.00" value="${item.price || ''}" min="0" step="0.01"
+              oninput="updateItem(${idx},'price',this.value)" style="min-width:75px" />
+          </td>
+          <td id="item-total-${idx}" class="font-semibold text-gray-700 whitespace-nowrap">${(item.total || 0).toLocaleString('ar-EG')} ج.م</td>
+          <td>
+            <button class="btn btn-danger btn-icon btn-sm" onclick="removeItem(${idx})">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </td>
+        </tr>`;
+            }).join('');
+            recalcTotals();
+        }
+
+        function escHtml(str) {
+            return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // Resolve effective category label for an item
+        function itemCatLabel(item) {
+            if (!item.category) return '';
+            if (item.category === 'أخرى') return item.categoryCustom || 'أخرى';
+            return item.category;
+        }
+
+        function saveBill() {
+            const name = document.getElementById('bill-customer-name').value.trim();
+            if (!name) { showToast('يرجى إدخال اسم العميل', 'error'); return; }
+            const seller = document.getElementById('bill-seller-name').value.trim();
+            if (!seller) { showToast('يرجى إدخال اسم البائع', 'error'); return; }
+            const date = document.getElementById('bill-date').value;
+            if (!date) { showToast('يرجى تحديد التاريخ', 'error'); return; }
+
+            // Sync names
+            document.querySelectorAll('.item-name-inp').forEach((inp, idx) => { if (formItems[idx]) formItems[idx].name = inp.value; });
+
+            const total = formItems.reduce((s, i) => s + (i.qty * i.price || 0), 0);
+            const bill = {
+                id: editingBillId || ('bill_' + Date.now()),
+                customerName: name,
+                customerNumber: document.getElementById('bill-customer-number').value.trim(),
+                sellerName: seller,
+                date,
+                note: document.getElementById('bill-note').value.trim(),
+                items: formItems.map(i => ({ ...i, total: i.qty * i.price || 0 })),
+                total,
+                createdAt: editingBillId ? getBill(editingBillId)?.createdAt : new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            };
+
+            upsertBill(bill);
+            showToast(editingBillId ? 'تم تحديث الفاتورة بنجاح' : 'تم حفظ الفاتورة بنجاح');
+            editingBillId = null;
+            formItems = [];
+            showSection('bills');
+        }
+
+        // ============================================================
+        //  VIEW BILL
+        // ============================================================
+        function viewBill(id) {
+            const bill = getBill(id);
+            if (!bill) return;
+            document.getElementById('bill-print-area').innerHTML = buildBillHTML(bill);
+            document.getElementById('view-modal').style.display = 'flex';
+        }
+        function closeViewModal() { document.getElementById('view-modal').style.display = 'none'; }
+
+        function buildBillHTML(bill) {
+            const rows = (bill.items || []).map((item, i) => `
+        <tr>
+          <td style="border:1px solid #e2e8f0;padding:8px 12px;text-align:center;">${i + 1}</td>
+          <td style="border:1px solid #e2e8f0;padding:8px 12px;text-align:right;">${escHtml(item.name)}</td>
+          <td style="border:1px solid #e2e8f0;padding:8px 12px;text-align:center;">
+            <span style="background:#ede9fe;color:#7c3aed;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:700;">${escHtml(itemCatLabel(item) || '—')}</span>
+          </td>
+          <td style="border:1px solid #e2e8f0;padding:8px 12px;text-align:center;">${(item.qty || 0).toLocaleString('ar-EG')}</td>
+          <td style="border:1px solid #e2e8f0;padding:8px 12px;text-align:center;">${(item.price || 0).toLocaleString('ar-EG')}</td>
+          <td style="border:1px solid #e2e8f0;padding:8px 12px;text-align:center;font-weight:700;">${(item.total || 0).toLocaleString('ar-EG')}</td>
+        </tr>`).join('');
+
+            const totalQty = (bill.items || []).reduce((s, i) => s + (i.qty || 0), 0);
+            const totalVal = bill.total || 0;
+
+            return `
+  <div dir="rtl" style="font-family:'Cairo',sans-serif;color:#1e293b;max-width:680px;margin:0 auto;">
+    <div style="text-align:center;margin-bottom:24px;padding-bottom:20px;border-bottom:3px solid #1d72e8;">
+      <div style="font-size:26px;font-weight:900;color:#142954;letter-spacing:1px;">الرويعي للتوريدات الكهربائية</div>
+      <div style="font-size:13px;color:#64748b;margin-top:4px;">فاتورة توريدات</div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div style="font-size:13px;color:#64748b;margin-bottom:2px;">العميل</div>
+        <div style="font-size:18px;font-weight:800;color:#1e293b;">${escHtml(bill.customerName)}</div>
+        ${bill.customerNumber ? `<div style="font-size:14px;color:#64748b;margin-top:2px;">📞 ${escHtml(bill.customerNumber)}</div>` : ''}
+        ${bill.note ? `<div style="font-size:13px;color:#64748b;margin-top:4px;">بيان: ${escHtml(bill.note)}</div>` : ''}
+      </div>
+      <div style="text-align:left;">
+        <div style="font-size:13px;color:#64748b;">رقم الفاتورة</div>
+        <div style="font-size:15px;font-weight:700;color:#1d72e8;font-family:monospace;">#${bill.id.slice(-8).toUpperCase()}</div>
+        <div style="font-size:13px;color:#64748b;margin-top:6px;">التاريخ</div>
+        <div style="font-size:14px;font-weight:600;">${formatDate(bill.date)}</div>
+        <div style="font-size:13px;color:#64748b;margin-top:6px;">البائع</div>
+        <div style="font-size:14px;font-weight:700;color:#059669;">${escHtml(bill.sellerName || '—')}</div>
+      </div>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:14px;">
+      <thead>
+        <tr style="background:linear-gradient(135deg,#142954,#1d72e8);">
+          <th style="padding:11px 12px;color:white;text-align:center;font-size:13px;">#</th>
+          <th style="padding:11px 12px;color:white;text-align:right;font-size:13px;">الصنف</th>
+          <th style="padding:11px 12px;color:white;text-align:center;font-size:13px;">الفئة</th>
+          <th style="padding:11px 12px;color:white;text-align:center;font-size:13px;">الكمية</th>
+          <th style="padding:11px 12px;color:white;text-align:center;font-size:13px;">السعر</th>
+          <th style="padding:11px 12px;color:white;text-align:center;font-size:13px;">القيمة</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr style="background:#f8fafc;">
+          <td colspan="3" style="border:1px solid #e2e8f0;padding:10px 12px;font-weight:700;text-align:right;">الإجمالي</td>
+          <td style="border:1px solid #e2e8f0;padding:10px 12px;text-align:center;font-weight:700;">${totalQty.toLocaleString('ar-EG')}</td>
+          <td style="border:1px solid #e2e8f0;padding:10px 12px;"></td>
+          <td style="border:1px solid #e2e8f0;padding:10px 12px;text-align:center;font-weight:800;color:#1d72e8;font-size:16px;">${totalVal.toLocaleString('ar-EG')}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div style="display:flex;justify-content:flex-end;">
+      <div style="background:#f0f7ff;border:2px solid #bfe0fd;border-radius:14px;padding:18px 24px;min-width:220px;">
+        <div style="display:flex;justify-content:space-between;gap:32px;margin-bottom:8px;">
+          <span style="color:#64748b;font-size:14px;font-weight:600;">الإجمالي:</span>
+          <span style="font-weight:700;">${totalVal.toLocaleString('ar-EG')}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:32px;margin-bottom:8px;">
+          <span style="color:#64748b;font-size:14px;font-weight:600;">المدفوع:</span>
+          <span style="font-weight:700;">${totalVal.toLocaleString('ar-EG')}</span>
+        </div>
+        <div style="border-top:2px solid #bfe0fd;margin:8px 0;"></div>
+        <div style="display:flex;justify-content:space-between;gap:32px;">
+          <span style="color:#64748b;font-size:14px;font-weight:600;">المتبقي:</span>
+          <span style="font-weight:800;color:#10b981;">0</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0;text-align:center;color:#94a3b8;font-size:12px;">
+      شكراً لتعاملكم معنا — الرويعي للتوريدات الكهربائية
+    </div>
+  </div>`;
+        }
+
+        function isMobile() {
+            return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+        }
+
+        function printBill() {
+            const content = document.getElementById('bill-print-area').innerHTML;
+            const styles = `
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+        * { font-family: 'Cairo', sans-serif; box-sizing: border-box; }
+        body { background: #fff; margin: 0; padding: 15mm 12mm; }
+        @media print {
+          @page { margin: 12mm; size: A4; }
+          body { padding: 0; }
+        }
+      `;
+
+            if (isMobile()) {
+                // Mobile: inject into current page, print, then restore
+                const overlay = document.createElement('div');
+                overlay.id = 'mobile-print-overlay';
+                overlay.style.cssText = 'position:fixed;inset:0;background:#fff;z-index:9999;overflow-y:auto;padding:20px;';
+                overlay.innerHTML = `<style>${styles}</style>${content}`;
+                document.body.appendChild(overlay);
+
+                // Hide everything else
+                document.body.style.overflow = 'hidden';
+
+                // Small delay to allow font to load
+                setTimeout(() => {
+                    window.print();
+
+                    // Restore after print dialog closes
+                    const restore = () => {
+                        const el = document.getElementById('mobile-print-overlay');
+                        if (el) el.remove();
+                        document.body.style.overflow = '';
+                        window.removeEventListener('focus', restore);
+                    };
+
+                    // 'focus' fires when user dismisses the print dialog on mobile
+                    window.addEventListener('focus', restore);
+                    // Fallback: remove after 60s just in case
+                    setTimeout(restore, 60000);
+                }, 500);
+
+            } else {
+                // Desktop: open new window (reliable on desktop)
+                const w = window.open('', '_blank', 'width=800,height=900');
+                if (!w) { showToast('يرجى السماح بالنوافذ المنبثقة للطباعة', 'error'); return; }
+                w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+          <style>${styles}</style>
+          <title>فاتورة</title>
+          </head><body>${content}</body></html>`);
+                w.document.close();
+                setTimeout(() => { w.focus(); w.print(); }, 600);
+            }
+        }
+
+        // ============================================================
+        //  DELETE
+        // ============================================================
+        let pendingDeleteId = null;
+        function confirmDelete(id) {
+            pendingDeleteId = id;
+            document.getElementById('delete-modal').style.display = 'flex';
+            document.getElementById('confirm-delete-btn').onclick = () => {
+                deleteBillById(pendingDeleteId);
+                closeDeleteModal();
+                renderBillsTable();
+                if (currentSection === 'dashboard') renderDashboard();
+                showToast('تم حذف الفاتورة');
+            };
+        }
+        function closeDeleteModal() { document.getElementById('delete-modal').style.display = 'none'; pendingDeleteId = null; }
+
+        // ============================================================
+        //  IMPORT / EXPORT
+        // ============================================================
+        function exportBills() {
+            const bills = loadBills();
+            if (!bills.length) { showToast('لا توجد فواتير للتصدير', 'error'); return; }
+            const blob = new Blob([JSON.stringify(bills, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'ruwaiee_bills_' + todayISO() + '.json'; a.click();
+            URL.revokeObjectURL(url);
+            showToast('تم تصدير ' + bills.length + ' فاتورة بنجاح');
+        }
+
+        function importBills(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (!Array.isArray(imported)) throw new Error();
+                    const existing = loadBills();
+                    const existIds = new Set(existing.map(b => b.id));
+                    let added = 0;
+                    imported.forEach(b => { if (!existIds.has(b.id)) { existing.push(b); added++; } });
+                    saveBills(existing);
+                    showToast('تم استيراد ' + added + ' فاتورة جديدة');
+                } catch { showToast('ملف غير صالح، يرجى استخدام ملف JSON صحيح', 'error'); }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        // ============================================================
+        //  INIT
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('current-date').textContent = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            renderDashboard();
+        });
+
+        document.getElementById('view-modal').addEventListener('click', function (e) { if (e.target === this) closeViewModal(); });
+        document.getElementById('delete-modal').addEventListener('click', function (e) { if (e.target === this) closeDeleteModal(); });
+    </script>
+</body>
+
+</html>
