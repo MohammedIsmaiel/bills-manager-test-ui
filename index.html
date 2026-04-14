@@ -10,6 +10,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;900&display=swap"
         rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PDF libs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -182,6 +185,25 @@
         .btn-icon {
             padding: 7px;
             border-radius: 8px;
+        }
+
+        /* PDF button */
+        .btn-pdf {
+            background: linear-gradient(135deg, #7c3aed, #5b21b6);
+            color: #fff;
+        }
+
+        .btn-pdf:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(124, 58, 237, .35);
+        }
+
+        /* loading spinner on PDF btn */
+        .btn-pdf:disabled {
+            opacity: .7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
         .inp {
@@ -445,14 +467,18 @@
                 font-size: 12px;
                 padding: 6px 8px;
             }
+
+            /* Stack modal header buttons on very small screens */
+            .modal-header-btns {
+                flex-wrap: wrap;
+                gap: 4px !important;
+            }
         }
 
         /* ============================================================
-           PRINT STYLES — only #mobile-print-zone is visible on print
+           PRINT STYLES — only #mobile-print-zone visible on print
            ============================================================ */
         @media print {
-
-            /* Hide the whole rendered page */
             body>*:not(#mobile-print-zone) {
                 display: none !important;
             }
@@ -487,8 +513,23 @@
             }
         }
 
-        /* Hidden on screen */
         #mobile-print-zone {
+            display: none;
+        }
+
+        /* Off-screen render container used by html2canvas */
+        #pdf-render-zone {
+            position: fixed;
+            left: -9999px;
+            top: 0;
+            width: 740px;
+            /* ~A4 at 96dpi */
+            background: #fff;
+            padding: 32px 36px;
+            direction: rtl;
+            font-family: 'Cairo', sans-serif;
+            color: #1e293b;
+            z-index: -1;
             display: none;
         }
     </style>
@@ -514,7 +555,6 @@
                 </div>
             </div>
         </div>
-
         <nav class="flex-1 py-4">
             <div class="text-white/40 text-xs font-bold px-5 mb-2 uppercase tracking-widest">القائمة</div>
             <div class="nav-item active" onclick="showSection('dashboard')">
@@ -559,15 +599,13 @@
                 استيراد / تصدير
             </div>
         </nav>
-
         <div class="p-4 border-t border-white/10">
-            <div class="text-white/40 text-xs text-center">الإصدار 1.2.0</div>
+            <div class="text-white/40 text-xs text-center">الإصدار 1.3.0</div>
         </div>
     </div>
 
     <!-- Main Content -->
     <div id="main-content" class="min-h-screen">
-
         <header
             class="bg-white border-b border-gray-200 sticky top-0 z-30 px-4 md:px-8 py-3 flex items-center justify-between"
             style="box-shadow:0 2px 12px rgba(0,0,0,.06);">
@@ -887,17 +925,30 @@
     <!-- VIEW BILL MODAL -->
     <div id="view-modal" class="modal-backdrop" style="display:none;">
         <div class="modal">
-            <div class="p-5 border-b border-gray-100 flex items-center justify-between">
-                <h3 class="font-bold text-gray-800 text-lg">عرض الفاتورة</h3>
-                <div class="flex gap-2">
-                    <button class="btn btn-primary btn-sm" onclick="printBill()">
+            <div class="p-4 border-b border-gray-100 flex items-center justify-between gap-2">
+                <h3 class="font-bold text-gray-800 text-lg flex-shrink-0">عرض الفاتورة</h3>
+                <div class="flex gap-2 items-center modal-header-btns">
+                    <!-- Print button (desktop friendly) -->
+                    <button class="btn btn-primary btn-sm" onclick="printBill()" id="btn-print">
                         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"
                             viewBox="0 0 24 24">
                             <polyline points="6 9 6 2 18 2 18 9" />
                             <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2" />
                             <rect x="6" y="14" width="12" height="8" />
                         </svg>
-                        طباعة / PDF
+                        طباعة
+                    </button>
+                    <!-- PDF button (works everywhere including mobile) -->
+                    <button class="btn btn-pdf btn-sm" onclick="savePDFFromModal(this)" id="btn-save-pdf">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"
+                            viewBox="0 0 24 24">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" y1="13" x2="8" y2="13" />
+                            <line x1="16" y1="17" x2="8" y2="17" />
+                            <polyline points="10 9 9 9 8 9" />
+                        </svg>
+                        حفظ PDF
                     </button>
                     <button class="btn btn-ghost btn-sm btn-icon" onclick="closeViewModal()">
                         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
@@ -934,8 +985,11 @@
 
     <div id="toast-container"></div>
 
-    <!-- THE ONLY print zone — populated just before window.print() -->
+    <!-- Print zone (only visible during window.print()) -->
     <div id="mobile-print-zone"></div>
+
+    <!-- Off-screen zone used by html2canvas for PDF rendering -->
+    <div id="pdf-render-zone"></div>
 
     <script>
         // ============================================================
@@ -987,7 +1041,7 @@
         function toggleSidebar() {
             const sb = document.getElementById('sidebar');
             const ov = document.getElementById('sidebar-overlay');
-            if (sb.classList.contains('open')) { closeSidebar(); }
+            if (sb.classList.contains('open')) closeSidebar();
             else { sb.classList.add('open'); ov.style.display = 'block'; }
         }
         function closeSidebar() {
@@ -1026,19 +1080,11 @@
             const cats = loadCategories();
             if (cats.map(c => c.toLowerCase()).includes(val.toLowerCase())) { showToast('هذه الفئة موجودة مسبقاً', 'error'); return; }
             if (val === 'أخرى') { showToast('الفئة "أخرى" محجوزة', 'error'); return; }
-            cats.push(val);
-            saveCategories(cats);
-            inp.value = '';
-            renderCategories();
-            showToast('تمت إضافة الفئة: ' + val);
+            cats.push(val); saveCategories(cats); inp.value = ''; renderCategories(); showToast('تمت إضافة الفئة: ' + val);
         }
 
         function deleteCategory(idx) {
-            const cats = loadCategories();
-            cats.splice(idx, 1);
-            saveCategories(cats);
-            renderCategories();
-            showToast('تم حذف الفئة');
+            const cats = loadCategories(); cats.splice(idx, 1); saveCategories(cats); renderCategories(); showToast('تم حذف الفئة');
         }
 
         function renderCategories() {
@@ -1046,10 +1092,10 @@
             const list = document.getElementById('categories-list');
             if (!cats.length) { list.innerHTML = '<div class="text-gray-400 text-sm">لا توجد فئات بعد</div>'; return; }
             list.innerHTML = cats.map((c, i) => `
-                <span class="cat-chip">
-                    <span>${escHtml(c)}</span>
-                    <button class="del-cat" onclick="deleteCategory(${i})" title="حذف">×</button>
-                </span>`).join('');
+        <span class="cat-chip">
+            <span>${escHtml(c)}</span>
+            <button class="del-cat" onclick="deleteCategory(${i})" title="حذف">×</button>
+        </span>`).join('');
             const pre = document.getElementById('preview-cats');
             if (pre) pre.outerHTML = cats.map(c => `<option>${escHtml(c)}</option>`).join('') + '<option>أخرى</option>';
         }
@@ -1069,10 +1115,7 @@
             const bills = loadBills();
             const totalMoney = bills.reduce((s, b) => s + (b.total || 0), 0);
             const totalItems = bills.reduce((s, b) => s + (b.items ? b.items.length : 0), 0);
-            const thisMonth = bills.filter(b => {
-                const d = new Date(b.date), now = new Date();
-                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-            }).length;
+            const thisMonth = bills.filter(b => { const d = new Date(b.date), now = new Date(); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); }).length;
 
             const stats = [
                 { label: 'إجمالي الفواتير', value: bills.length, icon: 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z', color: '#1d72e8', bg: '#dbeefe' },
@@ -1082,28 +1125,28 @@
             ];
 
             document.getElementById('stats-grid').innerHTML = stats.map(s => `
-                <div class="card stat-card">
-                    <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background:${s.bg}">
-                        <svg width="22" height="22" fill="none" stroke="${s.color}" stroke-width="2" viewBox="0 0 24 24"><path d="${s.icon}"/></svg>
-                    </div>
-                    <div>
-                        <div class="text-2xl font-black" style="color:${s.color}">${s.value}</div>
-                        <div class="text-xs text-gray-500 font-semibold mt-1">${s.label}</div>
-                    </div>
-                </div>`).join('');
+        <div class="card stat-card">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background:${s.bg}">
+                <svg width="22" height="22" fill="none" stroke="${s.color}" stroke-width="2" viewBox="0 0 24 24"><path d="${s.icon}"/></svg>
+            </div>
+            <div>
+                <div class="text-2xl font-black" style="color:${s.color}">${s.value}</div>
+                <div class="text-xs text-gray-500 font-semibold mt-1">${s.label}</div>
+            </div>
+        </div>`).join('');
 
             const recent = bills.slice(0, 5);
             document.getElementById('recent-bills-body').innerHTML = recent.length ? recent.map(b => `
-                <tr>
-                    <td><span class="badge badge-blue">${b.id.slice(-6)}</span></td>
-                    <td class="font-semibold text-gray-700">${escHtml(b.customerName)}</td>
-                    <td class="text-gray-500 text-sm">${escHtml(b.sellerName || '-')}</td>
-                    <td class="text-gray-500 text-sm">${formatDate(b.date)}</td>
-                    <td><span class="font-bold text-green-700">${(b.total || 0).toLocaleString('ar-EG')} ج.م</span></td>
-                    <td><div class="flex gap-1 justify-center"><button class="btn btn-ghost btn-icon btn-sm" onclick="viewBill('${b.id}')">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    </button></div></td>
-                </tr>`).join('')
+        <tr>
+            <td><span class="badge badge-blue">${b.id.slice(-6)}</span></td>
+            <td class="font-semibold text-gray-700">${escHtml(b.customerName)}</td>
+            <td class="text-gray-500 text-sm">${escHtml(b.sellerName || '-')}</td>
+            <td class="text-gray-500 text-sm">${formatDate(b.date)}</td>
+            <td><span class="font-bold text-green-700">${(b.total || 0).toLocaleString('ar-EG')} ج.م</span></td>
+            <td><div class="flex gap-1 justify-center"><button class="btn btn-ghost btn-icon btn-sm" onclick="viewBill('${b.id}')">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button></div></td>
+        </tr>`).join('')
                 : '<tr><td colspan="6" class="py-8 text-center text-gray-400">لا توجد فواتير بعد</td></tr>';
         }
 
@@ -1137,28 +1180,28 @@
             if (!bills.length) { tbody.innerHTML = ''; if (empty) empty.classList.remove('hidden'); return; }
             if (empty) empty.classList.add('hidden');
             tbody.innerHTML = bills.map(b => `
-                <tr>
-                    <td><span class="badge badge-blue font-mono">${b.id.slice(-6)}</span></td>
-                    <td class="font-semibold text-gray-700">${escHtml(b.customerName)}</td>
-                    <td class="text-gray-600 text-sm font-medium">${escHtml(b.sellerName || '-')}</td>
-                    <td class="text-gray-500 text-sm">${b.customerNumber || '-'}</td>
-                    <td class="text-gray-500 text-sm">${formatDate(b.date)}</td>
-                    <td><span class="badge badge-gold">${(b.items || []).length} صنف</span></td>
-                    <td><span class="font-bold text-green-700">${(b.total || 0).toLocaleString('ar-EG')} ج.م</span></td>
-                    <td>
-                        <div class="flex gap-1 justify-center">
-                            <button class="btn btn-ghost btn-icon btn-sm" title="عرض" onclick="viewBill('${b.id}')">
-                                <svg width="14" height="14" fill="none" stroke="#1d72e8" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                            </button>
-                            <button class="btn btn-ghost btn-icon btn-sm" title="تعديل" onclick="editBill('${b.id}')">
-                                <svg width="14" height="14" fill="none" stroke="#d97706" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                            </button>
-                            <button class="btn btn-ghost btn-icon btn-sm" title="حذف" onclick="confirmDelete('${b.id}')">
-                                <svg width="14" height="14" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-                            </button>
-                        </div>
-                    </td>
-                </tr>`).join('');
+        <tr>
+            <td><span class="badge badge-blue font-mono">${b.id.slice(-6)}</span></td>
+            <td class="font-semibold text-gray-700">${escHtml(b.customerName)}</td>
+            <td class="text-gray-600 text-sm font-medium">${escHtml(b.sellerName || '-')}</td>
+            <td class="text-gray-500 text-sm">${b.customerNumber || '-'}</td>
+            <td class="text-gray-500 text-sm">${formatDate(b.date)}</td>
+            <td><span class="badge badge-gold">${(b.items || []).length} صنف</span></td>
+            <td><span class="font-bold text-green-700">${(b.total || 0).toLocaleString('ar-EG')} ج.م</span></td>
+            <td>
+                <div class="flex gap-1 justify-center">
+                    <button class="btn btn-ghost btn-icon btn-sm" title="عرض" onclick="viewBill('${b.id}')">
+                        <svg width="14" height="14" fill="none" stroke="#1d72e8" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                    <button class="btn btn-ghost btn-icon btn-sm" title="تعديل" onclick="editBill('${b.id}')">
+                        <svg width="14" height="14" fill="none" stroke="#d97706" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button class="btn btn-ghost btn-icon btn-sm" title="حذف" onclick="confirmDelete('${b.id}')">
+                        <svg width="14" height="14" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                    </button>
+                </div>
+            </td>
+        </tr>`).join('');
         }
 
         // ============================================================
@@ -1167,8 +1210,7 @@
         let formItems = [];
 
         function initNewBill() {
-            editingBillId = null;
-            formItems = [];
+            editingBillId = null; formItems = [];
             document.getElementById('form-title').textContent = 'فاتورة جديدة';
             document.getElementById('bill-customer-name').value = '';
             document.getElementById('bill-customer-number').value = '';
@@ -1179,18 +1221,15 @@
         }
 
         function editBill(id) {
-            const bill = getBill(id);
-            if (!bill) return;
-            editingBillId = id;
-            formItems = JSON.parse(JSON.stringify(bill.items || []));
+            const bill = getBill(id); if (!bill) return;
+            editingBillId = id; formItems = JSON.parse(JSON.stringify(bill.items || []));
             document.getElementById('form-title').textContent = 'تعديل الفاتورة';
             document.getElementById('bill-customer-name').value = bill.customerName || '';
             document.getElementById('bill-customer-number').value = bill.customerNumber || '';
             document.getElementById('bill-seller-name').value = bill.sellerName || '';
             document.getElementById('bill-date').value = bill.date || todayISO();
             document.getElementById('bill-note').value = bill.note || '';
-            showSection('new-bill');
-            renderItemsTable();
+            showSection('new-bill'); renderItemsTable();
         }
 
         function addItemRow() {
@@ -1233,20 +1272,20 @@
             tbody.innerHTML = formItems.map((item, idx) => {
                 const isOther = item.category === 'أخرى';
                 return `
-                <tr id="item-row-${idx}">
-                    <td class="text-gray-400 font-mono text-sm">${idx + 1}</td>
-                    <td><input type="text" class="inp item-name-inp" placeholder="اسم الصنف" value="${escHtml(item.name)}" oninput="formItems[${idx}].name=this.value" style="min-width:120px"/></td>
-                    <td>
-                        <select class="inp item-cat-sel" style="min-width:120px;" onchange="onCategoryChange(${idx},this)">${buildCatOptions(item.category)}</select>
-                        <div id="cat-custom-${idx}" style="margin-top:5px;display:${isOther ? 'block' : 'none'};">
-                            <input type="text" class="inp" placeholder="أدخل الفئة..." value="${escHtml(item.categoryCustom || '')}" oninput="formItems[${idx}].categoryCustom=this.value" style="min-width:110px;font-size:13px;"/>
-                        </div>
-                    </td>
-                    <td><input type="number" class="inp" placeholder="0" value="${item.qty || ''}" min="0" oninput="updateItem(${idx},'qty',this.value)" style="min-width:60px"/></td>
-                    <td><input type="number" class="inp" placeholder="0.00" value="${item.price || ''}" min="0" step="0.01" oninput="updateItem(${idx},'price',this.value)" style="min-width:75px"/></td>
-                    <td id="item-total-${idx}" class="font-semibold text-gray-700 whitespace-nowrap">${(item.total || 0).toLocaleString('ar-EG')} ج.م</td>
-                    <td><button class="btn btn-danger btn-icon btn-sm" onclick="removeItem(${idx})"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></td>
-                </tr>`;
+        <tr id="item-row-${idx}">
+            <td class="text-gray-400 font-mono text-sm">${idx + 1}</td>
+            <td><input type="text" class="inp item-name-inp" placeholder="اسم الصنف" value="${escHtml(item.name)}" oninput="formItems[${idx}].name=this.value" style="min-width:120px"/></td>
+            <td>
+                <select class="inp item-cat-sel" style="min-width:120px;" onchange="onCategoryChange(${idx},this)">${buildCatOptions(item.category)}</select>
+                <div id="cat-custom-${idx}" style="margin-top:5px;display:${isOther ? 'block' : 'none'};">
+                    <input type="text" class="inp" placeholder="أدخل الفئة..." value="${escHtml(item.categoryCustom || '')}" oninput="formItems[${idx}].categoryCustom=this.value" style="min-width:110px;font-size:13px;"/>
+                </div>
+            </td>
+            <td><input type="number" class="inp" placeholder="0" value="${item.qty || ''}" min="0" oninput="updateItem(${idx},'qty',this.value)" style="min-width:60px"/></td>
+            <td><input type="number" class="inp" placeholder="0.00" value="${item.price || ''}" min="0" step="0.01" oninput="updateItem(${idx},'price',this.value)" style="min-width:75px"/></td>
+            <td id="item-total-${idx}" class="font-semibold text-gray-700 whitespace-nowrap">${(item.total || 0).toLocaleString('ar-EG')} ج.م</td>
+            <td><button class="btn btn-danger btn-icon btn-sm" onclick="removeItem(${idx})"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></td>
+        </tr>`;
             }).join('');
             recalcTotals();
         }
@@ -1277,47 +1316,42 @@
                 customerName: name,
                 customerNumber: document.getElementById('bill-customer-number').value.trim(),
                 sellerName: seller,
-                date,
-                note: document.getElementById('bill-note').value.trim(),
+                date, note: document.getElementById('bill-note').value.trim(),
                 items: formItems.map(i => ({ ...i, total: i.qty * i.price || 0 })),
                 total,
                 createdAt: editingBillId ? getBill(editingBillId)?.createdAt : new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
             };
-
             upsertBill(bill);
             showToast(editingBillId ? 'تم تحديث الفاتورة بنجاح' : 'تم حفظ الفاتورة بنجاح');
-            editingBillId = null;
-            formItems = [];
-            showSection('bills');
+            editingBillId = null; formItems = []; showSection('bills');
         }
 
         // ============================================================
         //  VIEW BILL
         // ============================================================
         function viewBill(id) {
-            const bill = getBill(id);
-            if (!bill) return;
+            const bill = getBill(id); if (!bill) return;
             document.getElementById('bill-print-area').innerHTML = buildBillHTML(bill);
             document.getElementById('view-modal').style.display = 'flex';
         }
         function closeViewModal() { document.getElementById('view-modal').style.display = 'none'; }
 
         // ============================================================
-        //  BUILD BILL HTML  (single definition)
+        //  BUILD BILL HTML
         // ============================================================
         function buildBillHTML(bill) {
             const rows = (bill.items || []).map((item, i) => `
-                <tr>
-                    <td style="border:1px solid #e2e8f0;padding:8px 12px;text-align:center;">${i + 1}</td>
-                    <td style="border:1px solid #e2e8f0;padding:8px 12px;text-align:right;">${escHtml(item.name)}</td>
-                    <td style="border:1px solid #e2e8f0;padding:8px 12px;text-align:center;">
-                        <span style="background:#ede9fe;color:#7c3aed;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:700;">${escHtml(itemCatLabel(item) || '—')}</span>
-                    </td>
-                    <td style="border:1px solid #e2e8f0;padding:8px 12px;text-align:center;">${(item.qty || 0).toLocaleString('ar-EG')}</td>
-                    <td style="border:1px solid #e2e8f0;padding:8px 12px;text-align:center;">${(item.price || 0).toLocaleString('ar-EG')}</td>
-                    <td style="border:1px solid #e2e8f0;padding:8px 12px;text-align:center;font-weight:700;">${(item.total || 0).toLocaleString('ar-EG')}</td>
-                </tr>`).join('');
+        <tr>
+            <td style="border:1px solid #e2e8f0;padding:8px 12px;text-align:center;">${i + 1}</td>
+            <td style="border:1px solid #e2e8f0;padding:8px 12px;text-align:right;">${escHtml(item.name)}</td>
+            <td style="border:1px solid #e2e8f0;padding:8px 12px;text-align:center;">
+                <span style="background:#ede9fe;color:#7c3aed;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:700;">${escHtml(itemCatLabel(item) || '—')}</span>
+            </td>
+            <td style="border:1px solid #e2e8f0;padding:8px 12px;text-align:center;">${(item.qty || 0).toLocaleString('ar-EG')}</td>
+            <td style="border:1px solid #e2e8f0;padding:8px 12px;text-align:center;">${(item.price || 0).toLocaleString('ar-EG')}</td>
+            <td style="border:1px solid #e2e8f0;padding:8px 12px;text-align:center;font-weight:700;">${(item.total || 0).toLocaleString('ar-EG')}</td>
+        </tr>`).join('');
 
             const totalQty = (bill.items || []).reduce((s, i) => s + (i.qty || 0), 0);
             const totalVal = bill.total || 0;
@@ -1389,35 +1423,114 @@
         }
 
         // ============================================================
-        //  PRINT  (single definition — works on mobile & desktop)
+        //  PRINT  (desktop — uses window.print())
         // ============================================================
         function printBill() {
             const content = document.getElementById('bill-print-area').innerHTML;
             const zone = document.getElementById('mobile-print-zone');
-
-            // Inject invoice content into the always-present print zone
             zone.innerHTML = content;
-
-            // Cleanup after print dialog closes
-            function cleanup() {
-                zone.innerHTML = '';
-                window.removeEventListener('afterprint', cleanup);
-            }
+            function cleanup() { zone.innerHTML = ''; window.removeEventListener('afterprint', cleanup); }
             window.addEventListener('afterprint', cleanup);
-            // Safety fallback in case afterprint never fires (some Android browsers)
             setTimeout(cleanup, 120000);
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                if (document.fonts && document.fonts.ready)
+                    document.fonts.ready.then(() => window.print()).catch(() => window.print());
+                else window.print();
+            }));
+        }
 
-            // Two animation frames ensure the DOM is painted before printing,
-            // then wait for the Cairo webfont to be fully loaded.
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    if (document.fonts && document.fonts.ready) {
-                        document.fonts.ready.then(() => window.print()).catch(() => window.print());
-                    } else {
-                        window.print();
-                    }
+        // ============================================================
+        //  SAVE AS PDF  (html2canvas + jsPDF — works on mobile too)
+        // ============================================================
+        async function savePDFFromModal(btn) {
+            if (!window.html2canvas || !window.jspdf) {
+                showToast('مكتبات PDF لم تُحمَّل بعد، انتظر لحظة', 'error'); return;
+            }
+
+            const originalHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg> جارٍ التحضير…`;
+
+            /* add spin keyframe once */
+            if (!document.getElementById('spin-style')) {
+                const s = document.createElement('style'); s.id = 'spin-style';
+                s.textContent = '@keyframes spin{to{transform:rotate(360deg)}}'; document.head.appendChild(s);
+            }
+
+            try {
+                /* 1. Put bill HTML into the off-screen render zone */
+                const zone = document.getElementById('pdf-render-zone');
+                zone.innerHTML = document.getElementById('bill-print-area').innerHTML;
+                zone.style.display = 'block';
+
+                /* 2. Wait for Cairo font & layout */
+                await document.fonts.ready;
+                await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+                /* 3. Capture with html2canvas */
+                const canvas = await html2canvas(zone, {
+                    scale: 2.5,           // high-DPI for sharp text
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    windowWidth: 740,
+                    scrollX: 0,
+                    scrollY: 0,
                 });
-            });
+
+                zone.style.display = 'none';
+                zone.innerHTML = '';
+
+                /* 4. Build A4 PDF */
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+                const pageW = pdf.internal.pageSize.getWidth();   // 210 mm
+                const pageH = pdf.internal.pageSize.getHeight();  // 297 mm
+                const margin = 10; // mm
+                const imgW = pageW - margin * 2;
+                const imgH = (canvas.height / canvas.width) * imgW;
+
+                const imgData = canvas.toDataURL('image/png');
+
+                if (imgH <= pageH - margin * 2) {
+                    /* Single page */
+                    pdf.addImage(imgData, 'PNG', margin, margin, imgW, imgH);
+                } else {
+                    /* Multi-page: slice canvas into page-height chunks */
+                    const pxPerMm = canvas.width / imgW;
+                    const pageHpx = (pageH - margin * 2) * pxPerMm;
+                    let sliceStart = 0;
+
+                    while (sliceStart < canvas.height) {
+                        const sliceH = Math.min(pageHpx, canvas.height - sliceStart);
+                        const sliceCanvas = document.createElement('canvas');
+                        sliceCanvas.width = canvas.width;
+                        sliceCanvas.height = sliceH;
+                        sliceCanvas.getContext('2d').drawImage(canvas, 0, -sliceStart);
+
+                        const sliceData = sliceCanvas.toDataURL('image/png');
+                        const sliceMmH = sliceH / pxPerMm;
+
+                        if (sliceStart > 0) pdf.addPage();
+                        pdf.addImage(sliceData, 'PNG', margin, margin, imgW, sliceMmH);
+                        sliceStart += sliceH;
+                    }
+                }
+
+                /* 5. Save */
+                const customerName = document.querySelector('#bill-print-area [style*="font-size:18px"]')?.textContent?.trim() || 'فاتورة';
+                pdf.save(`فاتورة-${customerName}.pdf`);
+                showToast('تم حفظ الفاتورة كـ PDF بنجاح ✓');
+
+            } catch (err) {
+                console.error('PDF error:', err);
+                showToast('حدث خطأ أثناء إنشاء PDF', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
         }
 
         // ============================================================
@@ -1428,9 +1541,7 @@
             pendingDeleteId = id;
             document.getElementById('delete-modal').style.display = 'flex';
             document.getElementById('confirm-delete-btn').onclick = () => {
-                deleteBillById(pendingDeleteId);
-                closeDeleteModal();
-                renderBillsTable();
+                deleteBillById(pendingDeleteId); closeDeleteModal(); renderBillsTable();
                 if (currentSection === 'dashboard') renderDashboard();
                 showToast('تم حذف الفاتورة');
             };
@@ -1452,8 +1563,7 @@
         }
 
         function importBills(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+            const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = e => {
                 try {
