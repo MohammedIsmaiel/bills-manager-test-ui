@@ -561,8 +561,8 @@
                                     <th style="width:36px">#</th>
                                     <th>الصنف</th>
                                     <th style="min-width:130px">الفئة</th>
-                                    <th style="width:85px">الكمية</th>
-                                    <th style="width:100px">السعر</th>
+                                    <th style="width:110px">الكمية</th>
+                                    <th style="width:110px">السعر</th>
                                     <th style="width:110px">القيمة</th>
                                     <th style="width:44px"></th>
                                 </tr>
@@ -1236,9 +1236,14 @@
             } else {
                 formItems[idx].name = sel.value; formItems[idx].nameCustom = ''; formItems[idx].useCustomName = false;
                 document.getElementById('prod-custom-' + idx).style.display = 'none';
-                // auto-fill price from product
+
+                // auto-fill price and category from product
                 const opt = sel.options[sel.selectedIndex];
-                if (opt && opt.dataset.price && !formItems[idx].price) {
+                const prods = loadProducts();
+                const matchedProd = prods.find(p => p.name === sel.value);
+
+                // fill price
+                if (opt && opt.dataset.price) {
                     formItems[idx].price = parseFloat(opt.dataset.price) || 0;
                     formItems[idx].total = formItems[idx].qty * formItems[idx].price;
                     const priceInp = document.getElementById('item-price-' + idx);
@@ -1246,6 +1251,19 @@
                     recalcTotals();
                     const cell = document.getElementById('item-total-' + idx);
                     if (cell) cell.textContent = (formItems[idx].total || 0).toLocaleString('ar-EG') + ' ج.م';
+                }
+
+                // fill category from matched product
+                if (matchedProd && matchedProd.category) {
+                    formItems[idx].category = matchedProd.category;
+                    formItems[idx].categoryCustom = '';
+                    const catSel = document.querySelector(`#item-row-${idx} .item-cat-sel`);
+                    if (catSel) {
+                        catSel.value = matchedProd.category;
+                        // hide custom category input if was open
+                        const customWrap = document.getElementById('cat-custom-' + idx);
+                        if (customWrap) customWrap.style.display = 'none';
+                    }
                 }
             }
         }
